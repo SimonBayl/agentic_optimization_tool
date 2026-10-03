@@ -8,6 +8,12 @@ from pydantic import BaseModel, Field
 class NamedItem(BaseModel):
     """Name and describe one element of the mathematical structure.
 
+    Attributes
+    ----------
+    name:
+        Short symbol such as W, d_c or x_wc.
+    description:
+        Meaning, indices, domain or unit of the element.
     """
 
     name: str = Field(description="Short symbol such as W, d_c or x_wc.")
@@ -17,6 +23,12 @@ class NamedItem(BaseModel):
 class DataBinding(BaseModel):
     """Link a set or parameter symbol to an input data column.
 
+    Attributes
+    ----------
+    symbol:
+        Name of a set or a parameter.
+    column:
+        Input column written as file.column, such as customers.csv.demand.
     """
 
     symbol: str = Field(description="Name of a set or a parameter.")

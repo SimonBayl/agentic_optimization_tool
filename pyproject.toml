@@ -4,35 +4,51 @@ version = "0.1.0"
 description = "Warehouse network optimization with LangGraph."
 requires-python = ">=3.12"
 dependencies = [
+    "langgraph>=0.2.0",
+    "langchain-core",
     "mistralai",
     "pydantic>=2",
+    "httpx",
     "dotenv",
-    "langgraph",
+    "ortools>=9.15",
     "pyyaml",
-]
-
-[dependency-groups]
-dev = [
-    "ruff",
-    "mypy",
-    "pylint",
-    "types-pyyaml",
 ]
 
 [tool.uv]
 package = false
 
+[dependency-groups]
+dev = ["ruff", "mypy", "pylint", "pytest", "types-pyyaml"]
+
 [tool.ruff]
 line-length = 80
+extend-exclude = ["agentic_tools/model/generated_model.py"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/[A-Z]*.py" = ["N999"]
 
 [tool.pylint.format]
 max-line-length = 80
 
-[tool.mypy]
-strict = true
-ignore_missing_imports = true
-explicit_package_bases = true
-
 [tool.pylint.basic]
-# Modules defining a single class are named after it (PascalCase).
-module-rgx = "([a-z_][a-z0-9_]*|[A-Z][a-zA-Z0-9]*)$"
+module-naming-style = "any"
+
+[tool.pylint.design]
+max-args = 6
+max-positional-arguments = 6
+
+[tool.pylint.typecheck]
+generated-members = ["linear_solver_pb2.*"]
+
+[tool.pylint.main]
+ignore = ["generated_model.py"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[tool.mypy]
+exclude = ["agentic_tools/model/generated_model\\.py"]
+
+[[tool.mypy.overrides]]
+module = ["ortools.*"]
+ignore_missing_imports = true

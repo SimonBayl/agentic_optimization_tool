@@ -1,24 +1,30 @@
-Everything between the user and the graph. For now it's a terminal chat, mainly used to test and debug the agent step by step.
+# interactions
+
+The interface between the user and the graph. It never calls an LLM and
+never decides the dialogue: it only submits messages and keeps states.
 
 ## Files
 
-- Conversation.py: ConversationSession keeps the AgentState between the turns. `submit` adds the user message, streams the graph and keeps:
-  - the new state,
-  - history: the previous states, for /undo,
-  - steps: what each node returned during the last turn, for /steps (printed live when verbose).
-- terminal.py: multiline input (the message is sent with /send) and the chat commands.
-- debug.py: prints the state and the node updates as indented JSON (pydantic models, messages and sets are converted).
-- data_files.py: builds the data schema from the CSV files of a folder (--data option).
-
-## Chat commands
-
-- /send: send the message typed so far.
-- /state [field ...]: print the AgentState, or only some fields (e.g. /state business_spec model_spec). An unknown field prints the list of the available ones.
-- /steps: replay the intermediate states of the last turn, node by node.
-- /debug: show or hide the node updates during each turn (same as -v).
-- /undo: go back to the state before the last turn. /new: start over, the data schema is kept.
-- /help, /quit.
-
-At the end of each turn the whole AgentState is printed (all fields, with the turn number), then the reply of the agent, so the question stays next to the prompt.
-
-Errors of a turn are caught and printed, the state is not changed and the user can send the message again.
+- ConversationSession.py: holds the committed state and the undo history.
+  - submit: strips the message (an empty one raises ValueError), runs
+    the graph on a deep copy of the state with the HumanMessage
+    appended, and commits the returned state only if the turn succeeds;
+    a failed turn leaves the state and the history unchanged. Returns
+    the reply of the turn.
+  - undo: restores the state preceding the last committed turn; returns
+    False when there is none.
+  - verbose: prints the business spec, the clarification state, the
+    model spec (marked draft while not ready), the result without its
+    code and the deferred IDs after each turn.
+  - The graph is typed by the ConversationGraph protocol (`ainvoke`), so
+    the tests can pass a deterministic double.
+- terminal.py: command line loop. A message spans several lines and is
+  sent with /send; an empty message is refused. /undo reverts the last
+  turn, /new starts over with the same graph and data schema, /quit
+  exits. An error is printed and the same message can be sent again.
+- data_schema.py: reads the headers of the `*.csv` files of the data
+  folder, in name order and in `utf-8-sig`, into the data schema
+  `{file: {column: meaning}}` given to the agents. The meanings come from
+  `data_schema.meanings` in parameters.yaml; a column without meaning
+  gets UNKNOWN_MEANING, to clarify with the user. The data values are
+  never loaded into the LLM context here.
