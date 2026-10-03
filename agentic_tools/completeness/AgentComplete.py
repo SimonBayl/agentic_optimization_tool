@@ -7,19 +7,7 @@ from data_model.ClarificationState import (
     ClarificationQuestion,
     ClarificationState,
 )
-from data_model.MathematicalStructure import MathematicalStructure
 from data_model.prompts import COMPLETE_PROMPT, SCHEMA_QUESTION
-
-
-def ask_schema() -> CompletenessOutput:
-    """Ask for the data format instead of calling the LLM."""
-    question = ClarificationQuestion(
-        id="C_DATA_SCHEMA",
-        question=SCHEMA_QUESTION,
-        reason="Link the parameters to the data.")
-    return CompletenessOutput(
-        clarification_state=ClarificationState(pending_questions=[question]),
-        model_spec=MathematicalStructure())
 
 
 class AgentCompleteness(MistralAgent):
@@ -29,35 +17,29 @@ class AgentCompleteness(MistralAgent):
     """
 
     @llm_retry()
-    async def complete(self, state: AgentState, data_schema: str,
-                       instruction: str) -> CompletenessOutput:
-        """
-        Review missing information and propose a mathematical structure.
-
-        Parameters
-        ----------
-        state:
-            Current state of the agent.
-        data_schema:
-            Columns and meaning of each input file, empty when unknown.
-        instruction:
-            Turn instruction listing the asked and deferred questions.
-
-        Returns
-        -------
-        CompletenessOutput
-            Questions on the gaps and the best draft of the model spec.
-        """
-        if not data_schema:
-            return ask_schema()
+    async def complete(self, state: AgentState) -> dict[str, object]:
+        """Review missing information and propose a mathematical structure."""
+        if not state.data_schema:
+            question = ClarificationQuestion(
+                id="C_DATA_SCHEMA",
+                question=SCHEMA_QUESTION,
+                reason="Link the parameters to the data.")
+            return {
+                "clarification_state": ClarificationState(
+                    pending_questions=[question]),
+                "model_spec": None,
+            }
         context = "\n\n".join((
             state.business_spec.model_dump_json(),
             state.clarification_state.model_dump_json(),
-            f"DATA SCHEMA: {data_schema}",
+            f"DATA SCHEMA: {state.data_schema}",
             self.format_messages(state.messages),
-            instruction,
         ))
-        return await self.parse(
+        parsed = await self.parse(
             [{"role": "system", "content": COMPLETE_PROMPT},
              {"role": "user", "content": context}],
             CompletenessOutput)
+        return {
+            "clarification_state": parsed.clarification_state,
+            "model_spec": parsed.model_spec,
+        }

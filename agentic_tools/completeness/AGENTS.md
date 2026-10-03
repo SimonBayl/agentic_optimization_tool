@@ -1,27 +1,71 @@
-Formalizes the business spec given by the understanding model into a more mathematical model spec and links it to the available data.
+# completeness
 
-This tool represent an intermediate representation of the optimization problem.
+Formalizes the business spec into a first mathematical model spec and
+links it to the available data, then lists the required fields still
+empty.
+
+## Behavior
 
 - Input: the AgentState, with the per-turn instruction.
-- Context sent to the LLM: the business spec, the clarification state, the data schema (columns and meaning of each file) and the conversation (COMPLETE_PROMPT).
-- Output: the best draft of the model spec, unknown parts left empty, and the questions still needed.
-- Without a data schema, no LLM is called: the question C_DATA_SCHEMA asks for the format of the data.
-- Model: `models.understanding`.
-- Retry: default policy (`llm_retry()`).
+- Messages sent to the LLM: COMPLETE_PROMPT as system message, then the
+  business spec, the clarification state, the data schema (columns and
+  meaning of each file) and the conversation.
+- Output: the best draft of the model spec, unknown parts left empty, and
+  the questions still needed, prefixed `C_`.
+- Without a data schema, no LLM is called: the required question
+  C_DATA_SCHEMA asks for the format of the data and the spec is None.
+- Model: `models.understanding`, default retry policy.
 
-## Details
+## Expected model spec
 
-- The data schema is passed apart from the state: the node gives `state.data_schema`, or the user answer when the last question asked was C_DATA_SCHEMA (`schema_answer` in orchestrator/dialogue.py). With the --data option the schema is built from the CSV headers (interactions/data_files.py): columns, number of rows and one example row per file.
-- The prompt asks for a linear model draft: sets and parameters bound to a column (file.column) or given by the user, variables with their domain, the objective, and one constraint per business rule named after its RULE_xxx.
-- Questions are about the gaps preventing a correct model (rule without data, ambiguous column meaning or unit, missing decision), asked in business terms, never about values already in the data.
-- `ready_for_formalization` is true only when every rule has a constraint and every parameter is bound.
-- The complete node merges only the C_ questions and saves model_spec and data_schema in the state, then the turn goes to reply.
+- Sets, parameters and variables named with short Python identifiers
+  without index suffix (x, cost, demand); indices, domain, bounds and
+  units in the description, for example `x[w, c]: fraction of demand of
+  c served by w`.
+- Linear objective and constraints, integer variables allowed; never a
+  product or quotient of two decision variables.
+- Each constraint named after its business rule ID.
+- Every set and parameter bound to an existing `file.column`.
+- Units consistent with the column meanings; multiobjective priorities
+  and assumptions affecting the model are asked, never chosen.
+
+## Checker
+
+After the LLM, the check node applies the functions of checker.py without
+any LLM. The checker owns the questions prefixed `C_CHECK_` and recreates
+them on each run, so a gap disappears as soon as it is filled.
+
+| Key | Gap |
+|-----|-----|
+| SUMMARY | no problem summary |
+| OBJECTIVES | no objective |
+| DIRECTION | an objective without direction |
+| ASSUMPTIONS | an assumption proposed by the agent, not confirmed |
+| HARDNESS | a rule of unknown hardness |
+| MODEL | no model spec although a data schema exists |
+| SETS, PARAMETERS, VARIABLES, CONSTRAINTS, BINDINGS | field empty |
+| OBJECTIVE | no objective expression or no direction |
+| BINDINGS_INVALID | a binding to an unknown symbol or `file.column` |
+
+- Model gaps are checked only when a data schema exists.
+- A question already asked is prefixed with FOLLOW_UP; its ID, reason
+  ("Required field left empty.") and related_to (the key) do not change.
+- Keys listed in `clarification.optional_checks` are never required.
+
+## Budget
+
+- budget_spent: the questions asked in total reach
+  `clarification.max_turns`.
+- released: a business or completeness question becomes optional once
+  the budget is spent, or once it was asked and deferred. Checker
+  questions stay required, since the model cannot be built without these
+  fields.
 
 ## Files
 
-- AgentComplete.py: AgentCompleteness (a MistralAgent), the LLM call. `ask_schema` builds the C_DATA_SCHEMA question without calling the LLM.
+- AgentComplete.py: AgentCompleteness, the LLM call.
 - OutputComplete.py: CompletenessOutput, the structured output:
-  - clarification_state: ClarificationState (C_ questions)
+  - clarification_state: ClarificationState
   - model_spec: MathematicalStructure
-- checker.py: deterministic checks, no LLM. For now only `budget_spent`, true when the number of questions asked reaches `clarification.max_turns`. It should also decide if the model is ready (every RULE has a constraint, every binding points to a real column...) instead of trusting the LLM flag.
-
+- checker.py: the gap functions, the check questions and the clarification
+  budget.

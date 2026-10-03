@@ -1,49 +1,52 @@
-"""Launch the optimization agent and chat with it from the terminal."""
+"""Launch a terminal conversation with the optimization backend."""
 
-import argparse
 import asyncio
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
-from mistralai.client import Mistral
 
 from agentic_tools.completeness.AgentComplete import AgentCompleteness
+from agentic_tools.edit.AgentEdit import AgentModelEditor
+from agentic_tools.explain.Explain import AgentExplain
+from agentic_tools.model.builder import AgentModelBuilder
 from agentic_tools.understand.AgentUnderstand import AgentUnderstanding
-from interactions.Conversation import ConversationSession
-from interactions.data_files import describe_folder
+from data_model.settings import load_settings
+from interactions.ConversationSession import ConversationSession
+from interactions.data_schema import load_schema
 from interactions.terminal import run_chat
 from orchestrator.graph_orchestrator import AgentGraph
-from parameters import load_settings
 
 
-def parse_arguments() -> argparse.Namespace:
-    """Read the command-line options."""
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("-v", "--verbose", action="store_true",
-                        help="print the state changed by each node")
-    parser.add_argument("-d", "--data", type=Path,
-                        help="folder of the CSV input files")
-    return parser.parse_args()
+def main() -> int:
+    """Read the parameters, build the agents, the graph and the session.
 
-
-def main() -> None:
-    """Build the agent graph and start the terminal chat."""
-    arguments = parse_arguments()
+    The parameters file can be replaced with the AGENT_PARAMETERS
+    environment variable.
+    """
     load_dotenv()
-    settings = load_settings()
-    client = Mistral(api_key=os.environ["MISTRAL_API_KEY"])
-    model = settings.models.understanding
-    graph = AgentGraph(AgentUnderstanding(client, settings, model),
-                       AgentCompleteness(client, settings, model),
-                       settings).compile()
-    data_schema = describe_folder(arguments.data) if arguments.data else ""
-    session = ConversationSession(graph, arguments.verbose, data_schema)
-    try:
-        asyncio.run(run_chat(session))
-    except (KeyboardInterrupt, EOFError):
-        print("\nGoodbye!")
+    api_key = os.environ.get("MISTRAL_API_KEY", "").strip()
+    default = Path(__file__).with_name("parameters.yaml")
+    settings = load_settings(Path(os.environ.get("AGENT_PARAMETERS",
+                                                 default)))
+    models = settings.models
+    data_dir = settings.model_builder.data_dir
+    graph = AgentGraph(
+        AgentUnderstanding(api_key, models.understanding, settings),
+        AgentCompleteness(api_key, models.understanding, settings),
+        AgentModelBuilder(api_key, data_dir, settings),
+        AgentModelEditor(api_key, models.editor, settings),
+        AgentExplain(api_key, models.explain, settings),
+        settings)
+    session = ConversationSession(
+        graph.compile(),
+        data_schema=load_schema(data_dir, settings),
+        verbose=True,
+    )
+    asyncio.run(run_chat(session))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

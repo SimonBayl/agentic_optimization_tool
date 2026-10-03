@@ -1,21 +1,98 @@
-# Mistral models used by each agentic tool.
-models:
-  understanding: ministral-8b-latest
+# Global parameters of the optimization agent.
+# Read once by main.py with data_model/settings.py and validated:
+# every key is required and unknown keys are rejected.
 
-# Sampling temperature of every LLM call.
-temperature: 0.0
+models:
+  # Mistral model of the understanding and completeness agents.
+  # Alternatives: ministral-3b-latest, mistral-small-latest.
+  understanding: ministral-8b-latest
+  # Mistral model writing the optimization code.
+  code: codestral-latest
+  # Mistral model editing the model spec once code has been generated.
+  editor: ministral-8b-latest
+  # Mistral model explaining the results in the terms of the user.
+  # mistral-small-latest explains better when the plan allows its rate.
+  explain: ministral-8b-latest
+
+llm:
+  temperature: 0.0
+  max_tokens: 8000
+
+retry:
+  # Retries of transient API errors (HTTP 429, 5xx, timeouts).
+  max_retries: 3
+  base_delay: 1.0
+  max_delay: 20.0
+  understanding_max_retries: 5
+  understanding_base_delay: 1.0
+  understanding_max_delay: 30.0
 
 clarification:
-  # Times a question is asked before it is deferred.
-  max_question_asks: 2
-  # Questions asked before completeness is reviewed anyway.
-  max_turns: 6
+  # Times a question is asked before being set aside.
+  max_asks: 2
+  # Questions asked in total before building the model with the remaining
+  # business questions set as optional.
+  max_turns: 5
+  # Prefix of the questions of the checker, and checks that never block.
+  check_prefix: C_CHECK_
+  optional_checks:
+    - ASSUMPTIONS
+    - HARDNESS
+  # Decision values shown in the reply.
+  max_result_lines: 20
 
-# Retry policy of the LLM calls (exponential backoff).
-retry:
-  default:
-    attempts: 3
-    base_delay: 1.0
-  understanding:
-    attempts: 5
-    base_delay: 2.0
+model_builder:
+  data_dir: test_data
+  # Generation attempts per stage, each fed with the previous error.
+  max_attempts: 4
+  max_tokens: 4000
+  temperature: 0.0
+  retry_temperature: 0.3
+  # Data rows shown to the code generator per file.
+  sample_rows: 3
+  # Characters of the error trace fed back to the code generator.
+  error_tail: 2000
+  # Execution time limit per stage, in seconds.
+  timeouts:
+    data: 60.0
+    solve: 180.0
+  # Time limit of the solver inside the solve stage, in seconds.
+  time_limit: 60
+  allowed_imports:
+    - csv
+    - pathlib
+    - math
+    - itertools
+    - collections
+    - typing
+    - ortools
+  forbidden_names:
+    - eval
+    - exec
+    - compile
+    - __import__
+    - globals
+    - getattr
+    - input
+
+model_editor:
+  # Attempts to obtain a valid patch, each fed with the previous errors.
+  max_attempts: 3
+
+explain:
+  # Nonzero values of each variable listed to the explainer.
+  listed_values: 40
+  # Relative margin under which a constraint counts as binding.
+  tolerance: 1.0e-6
+
+data_schema:
+  # Meaning of the known input columns, shown to the agents.
+  # Comment out every entry to test the agents without them: each column
+  # is then marked as a meaning to clarify with the user.
+  meanings:
+    # warehouse_id: Warehouse identifier
+    # customer_id: Customer identifier
+    # capacity: Maximum quantity shipped; same unit as demand
+    # fixed_cost: Cost of opening a warehouse
+    # demand: Required customer quantity
+    # cost: Cost of serving the entire customer demand from this warehouse
