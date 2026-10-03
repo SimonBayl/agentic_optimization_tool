@@ -1,0 +1,38 @@
+[project]
+name = "truck-warehouse-optimization"
+version = "0.1.0"
+description = "Warehouse network optimization with LangGraph."
+requires-python = ">=3.12"
+dependencies = [
+    "mistralai",
+    "pydantic>=2",
+    "dotenv",
+    "langgraph",
+    "pyyaml",
+]
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "mypy",
+    "pylint",
+    "types-pyyaml",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 80
+
+[tool.pylint.format]
+max-line-length = 80
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
+explicit_package_bases = true
+
+[tool.pylint.basic]
+# Modules defining a single class are named after it (PascalCase).
+module-rgx = "([a-z_][a-z0-9_]*|[A-Z][a-zA-Z0-9]*)$"
