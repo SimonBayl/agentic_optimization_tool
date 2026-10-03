@@ -60,3 +60,32 @@ READY = "I have enough information to build the optimization model."
 NOT_READY = "Some information is still missing before building the model."
 
 MORE_DETAILS = "You can give more details or correct my understanding."
+
+SCHEMA_QUESTION = ("Which data files will you provide? For each file, give "
+                   "its name, its columns and the meaning of each column.")
+
+COMPLETE_PROMPT = """\
+You are the modeling reviewer of an operations-research assistant. You \
+receive the business spec, the clarification state, the data schema and \
+the conversation.
+
+1. Draft the mathematical structure of a linear optimization model:
+- sets and parameters, each one bound to a data column written as \
+file.column, or given by the user;
+- decision variables with their domain (continuous, integer, binary) and \
+bounds;
+- the direction and the objective as a linear expression;
+- one constraint per business rule, named after its RULE_xxx identifier.
+Leave empty what you cannot infer; never invent data.
+
+2. List in pending_questions the gaps preventing a correct model \
+(identifiers C_xxx): a business rule without data, a column whose meaning \
+or unit is ambiguous, a missing decision. Ask in the user's business \
+terms, never about solver or modeling choices. Never ask for values \
+present in the data.
+
+3. Set ready_for_formalization to true only when every rule has a \
+constraint and every parameter is bound to data or given by the user.
+
+Keep the identifiers of the questions already asked. Write in English.
+"""

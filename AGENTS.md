@@ -1,4 +1,3 @@
-The development context is described in Optimization - Simon Bayle.pdf
 
 - The code must pass the linters (ruff, mypy, pylint) and must not exceed 80 columns.
 - To run code, use the virtual environment .venv/bin/activate. If you need new dependencies, add them to pyproject.toml, then run uv sync.

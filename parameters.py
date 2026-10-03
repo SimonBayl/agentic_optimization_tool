@@ -29,12 +29,19 @@ class RetryPolicies(BaseModel):
     understanding: RetryPolicy
 
 
+class ClarificationBudget(BaseModel):
+    """Limits on the questions asked to the user."""
+
+    max_question_asks: int
+    max_turns: int
+
+
 class Settings(BaseModel):
     """Global parameters read by the nodes and the routes."""
 
     models: Models
     temperature: float
-    max_question_asks: int
+    clarification: ClarificationBudget
     retry: RetryPolicies
 
 

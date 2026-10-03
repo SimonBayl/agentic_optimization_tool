@@ -3,12 +3,15 @@
 import argparse
 import asyncio
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 from mistralai.client import Mistral
 
+from agentic_tools.completeness.AgentComplete import AgentCompleteness
 from agentic_tools.understand.AgentUnderstand import AgentUnderstanding
 from interactions.Conversation import ConversationSession
+from interactions.data_files import describe_folder
 from interactions.terminal import run_chat
 from orchestrator.graph_orchestrator import AgentGraph
 from parameters import load_settings
@@ -18,7 +21,9 @@ def parse_arguments() -> argparse.Namespace:
     """Read the command-line options."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("-v", "--verbose", action="store_true",
-                        help="print the business spec after each turn")
+                        help="print the state changed by each node")
+    parser.add_argument("-d", "--data", type=Path,
+                        help="folder of the CSV input files")
     return parser.parse_args()
 
 
@@ -28,9 +33,12 @@ def main() -> None:
     load_dotenv()
     settings = load_settings()
     client = Mistral(api_key=os.environ["MISTRAL_API_KEY"])
-    graph = AgentGraph(AgentUnderstanding(client, settings),
+    model = settings.models.understanding
+    graph = AgentGraph(AgentUnderstanding(client, settings, model),
+                       AgentCompleteness(client, settings, model),
                        settings).compile()
-    session = ConversationSession(graph, arguments.verbose)
+    data_schema = describe_folder(arguments.data) if arguments.data else ""
+    session = ConversationSession(graph, arguments.verbose, data_schema)
     try:
         asyncio.run(run_chat(session))
     except (KeyboardInterrupt, EOFError):

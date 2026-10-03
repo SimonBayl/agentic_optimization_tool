@@ -5,11 +5,12 @@ from dataclasses import dataclass, field
 from langchain_core.messages import AnyMessage
 
 from data_model.BusinessProblemSpec import BusinessProblemSpec
-from data_model.Clarification import ClarificationState
+from data_model.ClarificationState import ClarificationState
+from data_model.MathematicalStructure import MathematicalStructure
 
 
 @dataclass
-class AgentState:
+class AgentState:  # pylint: disable=too-many-instance-attributes
     """Create the shared state of the agent.
 
     Attributes
@@ -26,6 +27,11 @@ class AgentState:
         Questions asked too often, replaced by assumptions.
     reply:
         Last answer sent to the user.
+    data_schema:
+        Columns and meaning of each input file, empty when unknown.
+    model_spec:
+        Draft of the mathematical structure, reset when the business
+        spec changes.
     """
 
     messages: list[AnyMessage] = field(default_factory=list)
@@ -36,3 +42,5 @@ class AgentState:
     asked_questions: dict[str, list[str]] = field(default_factory=dict)
     deferred_question_ids: set[str] = field(default_factory=set)
     reply: str = ""
+    data_schema: str = ""
+    model_spec: MathematicalStructure | None = None

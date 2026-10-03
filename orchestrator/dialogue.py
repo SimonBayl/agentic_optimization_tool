@@ -1,8 +1,16 @@
 """Select, merge and summarize the clarification questions."""
 
 from data_model.AgentState import AgentState
-from data_model.Clarification import ClarificationQuestion, ClarificationState
-from data_model.prompts import NOT_READY, READY, TURN_INSTRUCTION
+from data_model.ClarificationState import (
+    ClarificationQuestion,
+    ClarificationState,
+)
+from data_model.prompts import (
+    NOT_READY,
+    READY,
+    SCHEMA_QUESTION,
+    TURN_INSTRUCTION,
+)
 from parameters import Settings
 
 
@@ -16,16 +24,20 @@ def turn_instruction(state: AgentState) -> str:
 
 
 def merge_clarifications(previous: ClarificationState,
-                         new: ClarificationState) -> ClarificationState:
+                         new: ClarificationState,
+                         prefix: str) -> ClarificationState:
     """
-    Keep every resolved question and drop them from the pending ones.
+    Replace the pending questions of one phase and keep the others.
 
     Parameters
     ----------
     previous:
-        Clarification state before the turn.
+        Clarification state before the node.
     new:
         Clarification state returned by the LLM.
+    prefix:
+        Identifier prefix of the questions owned by the phase, such as
+        Q_ for understand or C_ for completeness.
 
     Returns
     -------
@@ -34,13 +46,25 @@ def merge_clarifications(previous: ClarificationState,
     """
     resolved = list(dict.fromkeys(previous.resolved_question_ids
                                   + new.resolved_question_ids))
-    pending = [question for question in new.pending_questions
+    kept = [question for question in previous.pending_questions
+            if not question.id.startswith(prefix)]
+    owned = [question for question in new.pending_questions
+             if question.id.startswith(prefix)]
+    pending = [question for question in kept + owned
                if question.id not in resolved]
     ready = new.ready_for_formalization and not any(
         question.required for question in pending)
     return ClarificationState(pending_questions=pending,
                               resolved_question_ids=resolved,
                               ready_for_formalization=ready)
+
+
+def schema_answer(state: AgentState) -> str:
+    """Return the user answer to the data schema question, if any."""
+    messages = state.messages
+    asked = (len(messages) >= 2 and messages[-1].type == "human"
+             and SCHEMA_QUESTION in messages[-2].text)
+    return messages[-1].text if asked else ""
 
 
 def pick_question(
@@ -69,7 +93,7 @@ def pick_question(
         if question.id in state.deferred_question_ids:
             continue
         asks = len(state.asked_questions.get(question.id, []))
-        if asks < settings.max_question_asks:
+        if asks < settings.clarification.max_question_asks:
             return question, deferred
         deferred.append(question.id)
     return None, deferred
