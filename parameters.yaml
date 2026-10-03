@@ -1,0 +1,18 @@
+# Mistral models used by each agentic tool.
+models:
+  understanding: ministral-8b-latest
+
+# Sampling temperature of every LLM call.
+temperature: 0.0
+
+# Number of times a clarification question is asked before it is deferred.
+max_question_asks: 2
+
+# Retry policy of the LLM calls (exponential backoff).
+retry:
+  default:
+    attempts: 3
+    base_delay: 1.0
+  understanding:
+    attempts: 5
+    base_delay: 2.0
