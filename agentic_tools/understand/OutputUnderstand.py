@@ -3,7 +3,7 @@
 from pydantic import BaseModel
 
 from data_model.BusinessProblemSpec import BusinessProblemSpec
-from data_model.Clarification import ClarificationState
+from data_model.ClarificationState import ClarificationState
 
 
 class UnderstandingOutput(BaseModel):

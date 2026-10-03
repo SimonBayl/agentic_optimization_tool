@@ -5,8 +5,11 @@ models:
 # Sampling temperature of every LLM call.
 temperature: 0.0
 
-# Number of times a clarification question is asked before it is deferred.
-max_question_asks: 2
+clarification:
+  # Times a question is asked before it is deferred.
+  max_question_asks: 2
+  # Questions asked before completeness is reviewed anyway.
+  max_turns: 6
 
 # Retry policy of the LLM calls (exponential backoff).
 retry:

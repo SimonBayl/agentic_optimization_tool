@@ -1,4 +1,3 @@
-The development context is described in Optimization - Simon Bayle.pdf
 
 - The code must pass the linters (ruff, mypy, pylint) and must not exceed 80 columns.
 - To run code, use the virtual environment .venv/bin/activate. If you need new dependencies, add them to pyproject.toml, then run uv sync.
@@ -7,6 +6,8 @@ The development context is described in Optimization - Simon Bayle.pdf
 - When developing a feature, keep the code concise: write small functions and do not generate too much code, so that it stays easy to read.
 - For all user-interface development, follow the specifications in user_interface/AGENTS.md.
 - All text, whether user-facing, specification or prompt, must be written in English.
+- Parameters of the agent (model names, temperature, retry policy, clarification budget) live in parameters.yaml and are read through parameters.py. Don't hard-code them in the tools.
+- Each folder has its own AGENTS.md, read it before changing the folder and keep it up to date.
 
 I designed the following architecture for the agent. You may challenge it, but you must explain and justify your choices.
 It must be built step by step, without rushing.
@@ -132,6 +133,7 @@ Finally, the EXPLAINER converts these technical results into a user-friendly res
 
 
 Stack: LangGraph to build the agent, Mistral 3B for user interaction and completeness, and devstral to build the OR model and code.
+For now understand and completeness both run on ministral-8b-latest (`models.understanding` in parameters.yaml), the calls go through the mistralai SDK with structured outputs.
 
 
 
@@ -151,3 +153,32 @@ Engineer for trust - Make results verifiable, and describe how you'd evaluate co
 You choose the architecture, frameworks, models, and solvers - we care about how you reason, what features you develop, how you structure, not a prescribed design.
 Test your approach - You should test your approach on the Warehouse Network Optimization problem provided to you. Though, 
 your system must not overfit this problem.
+
+
+
+## Where we are
+
+Only the first two steps are built for now: UNDERSTANDER and COMPLETENESS. The VALIDATOR and the next nodes will be added one at a time.
+
+One user message = one run of the LangGraph:
+
+    START → understand ─ route ─┬─ required Q_ question pending → reply → END
+                                └─ otherwise ─────────────────→ complete → reply → END
+
+The route also goes to complete once the clarification budget is spent (`clarification.max_turns`), so the user is not stuck answering questions forever.
+
+Question IDs tell which phase owns a question: Q_xxx for understand, C_xxx for completeness. When the clarification state is merged, a phase only replaces its own questions and keeps the others.
+
+Folders:
+- agentic_tools/: the LLM tools (understand, completeness) and utils.py (retry decorator, MistralAgent base class).
+- data_model/: AgentState, the pydantic specs and the prompts.
+- orchestrator/: the graph wiring and the logic deciding which question to ask.
+- interactions/: the terminal chat, the session and the debug display.
+- test_data/: CSV files of the warehouse problem, only used to test.
+
+To run the agent from the terminal:
+
+    source .venv/bin/activate
+    python main.py --data test_data
+
+--data gives the folder of the CSV files (the data schema is built from their headers). Without it, completeness asks the user to describe the data. -v prints what each node changed during the turn. After each answer the whole AgentState is printed to help debugging, see interactions/AGENTS.md for the chat commands.
