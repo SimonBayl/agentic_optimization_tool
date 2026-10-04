@@ -4,8 +4,8 @@
 
 models:
   # Mistral model of the understanding and completeness agents.
-  # Alternatives: ministral-3b-latest, mistral-small-latest.
-  understanding: ministral-8b-latest
+  # Alternatives: ministral-8b-latest, mistral-small-latest.
+  understanding: ministral-14b-latest
   # Mistral model writing the optimization code.
   code: codestral-latest
   # Mistral model editing the model spec once code has been generated.
@@ -90,9 +90,9 @@ data_schema:
   # Comment out every entry to test the agents without them: each column
   # is then marked as a meaning to clarify with the user.
   meanings:
-    # warehouse_id: Warehouse identifier
-    # customer_id: Customer identifier
-    # capacity: Maximum quantity shipped; same unit as demand
-    # fixed_cost: Cost of opening a warehouse
-    # demand: Required customer quantity
-    # cost: Cost of serving the entire customer demand from this warehouse
+    warehouse_id: Warehouse identifier
+    customer_id: Customer identifier
+    capacity: Maximum quantity shipped; same unit as demand
+    fixed_cost: Cost of opening a warehouse
+    demand: Required customer quantity
+    cost: Cost of serving the entire customer demand from this warehouse
