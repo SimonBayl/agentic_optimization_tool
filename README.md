@@ -43,10 +43,14 @@ Requirements: [uv](https://docs.astral.sh/uv/) and a Mistral API key.
    MISTRAL_API_KEY=<your key>
    ```
 
-2. Launch the agent:
+2. Launch the agent on LINUX:
 
    ```
-   ./launch.sh
+   cd agentic_optimization_tool
+   uv venv
+   source .venv/bin/activate
+   uv sync
+   python main.py
    ```
 
    The script creates the virtual environment, installs the dependencies
