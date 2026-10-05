@@ -42,7 +42,7 @@ def main() -> int:
     session = ConversationSession(
         graph.compile(),
         data_schema=load_schema(data_dir, settings),
-        verbose=True,
+        verbose=False
     )
     asyncio.run(run_chat(session))
     return 0
