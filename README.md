@@ -59,6 +59,8 @@ Requirements: [uv](https://docs.astral.sh/uv/) and a Mistral API key.
 In the terminal, write your message and type `/send` on its own line.
 `/undo` reverts the last turn, `/new` starts over and `/quit` exits.
 
+To run the code with State values and internal model data use verbose = True in main.py for ConversationSession.
+
 ## What you can change
 
 - **Data files** (`test_data/` by default): the CSV files the model reads.
